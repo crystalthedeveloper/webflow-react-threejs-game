@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   try {
     const response = await axios.get(
-      `https://api.webflow.com/collections/${collectionId}/items`,
+      `https://api.webflow.com/v2/collections/${collectionId}/items`,
       {
         headers: {
           Authorization: `Bearer ${apiToken}`,
