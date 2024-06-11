@@ -23,10 +23,10 @@ const CustomText3D = () => {
       {cmsData.length > 0 ? (
         cmsData.map((item, index) => (
           <RigidBody key={index}>
-            <Text3D 
-              font={CinzelExtraBoldRegular} 
-              size={0.5}  // Adjust the size here
-              height={0.1}  // Adjust the height here
+            <Text3D
+              font={CinzelExtraBoldRegular}
+              size={0.5} // Adjust the size here
+              height={0.1} // Adjust the height here
             >
               {item.name}
               <meshStandardMaterial attach="material" color="blue" />
@@ -35,10 +35,10 @@ const CustomText3D = () => {
         ))
       ) : (
         <RigidBody>
-          <Text3D 
-            font={CinzelExtraBoldRegular} 
-            size={0.5}  // Adjust the size here
-            height={0.1}  // Adjust the height here
+          <Text3D
+            font={CinzelExtraBoldRegular}
+            size={0.5} // Adjust the size here
+            height={0.1} // Adjust the height here
           >
             Loading
             <meshStandardMaterial attach="material" color="red" />
