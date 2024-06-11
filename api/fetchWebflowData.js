@@ -5,6 +5,9 @@ export default async function handler(req, res) {
   const collectionId = process.env.WEBFLOW_COLLECTION_ID;
   const apiToken = process.env.WEBFLOW_API_TOKEN;
 
+  console.log('Collection ID:', collectionId);
+  console.log('API Token:', apiToken ? 'Exists' : 'Missing');
+
   if (!collectionId || !apiToken) {
     console.error('Environment variables are missing.');
     res.status(500).json({ error: 'Environment variables are missing.' });
