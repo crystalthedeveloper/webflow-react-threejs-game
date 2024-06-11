@@ -25,8 +25,8 @@ const CustomText3D = () => {
           <RigidBody key={index}>
             <Text3D
               font={CinzelExtraBoldRegular}
-              size={0.5} // Adjust the size here
-              height={0.1} // Adjust the height here
+              size={0.5}
+              height={0.1}
             >
               {item.name}
               <meshStandardMaterial attach="material" color="blue" />
@@ -37,8 +37,8 @@ const CustomText3D = () => {
         <RigidBody>
           <Text3D
             font={CinzelExtraBoldRegular}
-            size={0.5} // Adjust the size here
-            height={0.1} // Adjust the height here
+            size={0.5}
+            height={0.1}
           >
             Loading
             <meshStandardMaterial attach="material" color="red" />
