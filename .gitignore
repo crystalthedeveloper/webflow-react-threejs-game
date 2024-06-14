@@ -7,7 +7,7 @@ build/
 
 # Environment variables
 .env.local
-
+.env
 # Logs
 logs/
 *.log
@@ -16,3 +16,8 @@ npm-debug.log*
 # System files
 .DS_Store
 Thumbs.db
+
+# backend
+.firebaserc
+firebase.json
+functions/

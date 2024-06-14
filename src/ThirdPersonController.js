@@ -2,33 +2,37 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useGLTF, useAnimations } from '@react-three/drei';
-import { RigidBody, CuboidCollider } from '@react-three/rapier';
+import { RigidBody, CuboidCollider, useRapier } from '@react-three/rapier';
 import * as THREE from 'three';
 import useKeyboardControls from './hooks/useKeyboardControls';
+import useGame from './hooks/useGame';
 
-const ThirdPersonController = () => {
+const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
   const { camera, scene } = useThree();
   const keys = useKeyboardControls();
   const playerRef = useRef();
   const { scene: playerScene, animations } = useGLTF('/playerModel.glb');
   const { actions } = useAnimations(animations, playerScene);
   const moveDirection = useRef(new THREE.Vector3(0, 0, 0));
-  const cameraOffset = new THREE.Vector3(0, 2, -5);
+  const cameraOffset = new THREE.Vector3(0, 1.6, 5); // Adjusted for better view
 
-  const raycaster = useRef(new THREE.Raycaster());
+  const { rapier, world } = useRapier(); // Get the rapier world object
   const [grounded, setGrounded] = useState(false);
   const [isJumping, setIsJumping] = useState(false);
   const [jumpCooldown, setJumpCooldown] = useState(false);
   const jumpStrength = 20;
-  const jumpCooldownTime = 500; // Cooldown period in milliseconds
+  const jumpCooldownTime = 500;
+  const restart = useGame((state) => state.restart);
+  const [hitObjects, setHitObjects] = useState(new Set());
+  const cameraPhase = useGame((state) => state.cameraPhase);
+  const setCameraPhase = useGame((state) => state.setCameraPhase);
 
   useEffect(() => {
     camera.position.set(0, 2, 5);
     camera.lookAt(new THREE.Vector3(0, 1, 0));
-    
-    // Rotate the player model so the back faces the camera
-    playerScene.rotation.y = Math.PI; // Rotate 180 degrees around the Y axis
-    
+
+    playerScene.rotation.y = Math.PI;
+
     scene.add(playerScene);
 
     if (actions['idle']) {
@@ -39,15 +43,25 @@ const ThirdPersonController = () => {
   const checkGrounded = () => {
     if (!playerRef.current) return false;
 
-    const origin = new THREE.Vector3(
-      playerRef.current.translation().x,
-      playerRef.current.translation().y,
-      playerRef.current.translation().z
-    );
-    raycaster.current.set(origin, new THREE.Vector3(0, -1, 0));
+    const origin = {
+      x: playerRef.current.translation().x,
+      y: playerRef.current.translation().y - 0.5, // small offset to avoid starting inside the player's collider
+      z: playerRef.current.translation().z,
+    };
 
-    const intersects = raycaster.current.intersectObjects(scene.children, true);
-    return intersects.length > 0 && intersects[0].distance < 1.1;
+    const ray = new rapier.Ray(origin, { x: 0, y: -1, z: 0 });
+    const hit = world.castRay(ray, 1.1, true, (collider) => {
+      return collider !== playerRef.current.collider();
+    });
+
+    if (hit && hit.collider) {
+      const isGrounded = hit.toi >= 0 && hit.toi < 1.1; // Adjust condition to include toi of 0
+      setGrounded(isGrounded);
+      return isGrounded;
+    }
+
+    setGrounded(false);
+    return false;
   };
 
   useEffect(() => {
@@ -56,7 +70,9 @@ const ThirdPersonController = () => {
         playerRef.current.applyImpulse({ x: 0, y: jumpStrength, z: 0 }, true);
         setIsJumping(true);
         setJumpCooldown(true);
-        setTimeout(() => setJumpCooldown(false), jumpCooldownTime);
+        setTimeout(() => {
+          setJumpCooldown(false);
+        }, jumpCooldownTime);
 
         if (actions['jump']) {
           actions['jump'].reset().fadeIn(0.2).play();
@@ -81,70 +97,100 @@ const ThirdPersonController = () => {
   useFrame((state, delta) => {
     if (!playerRef.current) return;
 
-    moveDirection.current.set(0, 0, 0);
+    if (cameraPhase === 'overview') {
+      // Set initial cinematic camera position and target
+      const cinematicPosition = new THREE.Vector3(10, 10, 10);
+      const targetPosition = new THREE.Vector3(0, 0, 0);
 
-    if (keys.has('ArrowUp')) moveDirection.current.z += 1;
-    if (keys.has('ArrowDown')) moveDirection.current.z -= 1;
-    if (keys.has('ArrowLeft')) moveDirection.current.x -= 1;
-    if (keys.has('ArrowRight')) moveDirection.current.x += 1;
+      camera.position.lerp(cinematicPosition, 0.05); // Adjust the lerp factor for the desired smoothness
+      camera.lookAt(targetPosition);
 
-    const moveSpeed = keys.has('Shift') ? 10 : 5;
-    moveDirection.current.normalize().multiplyScalar(moveSpeed * delta);
+      // Transition to player's camera view after some time
+      setTimeout(() => {
+        setCameraPhase('player');
+      }, 3000); // Duration of the cinematic view
+    } else if (cameraPhase === 'player') {
+      moveDirection.current.set(0, 0, 0);
 
-    const currentTranslation = playerRef.current.translation();
-    const forwardVector = new THREE.Vector3(0, 0, 1).applyQuaternion(playerRef.current.rotation());
-    const leftVector = new THREE.Vector3(-1, 0, 0).applyQuaternion(playerRef.current.rotation());
+      if (keys.has('ArrowUp')) moveDirection.current.z -= 1;
+      if (keys.has('ArrowDown')) moveDirection.current.z += 1;
 
-    const newTranslation = {
-      x: currentTranslation.x + moveDirection.current.x * leftVector.x + moveDirection.current.z * forwardVector.x,
-      y: currentTranslation.y,
-      z: currentTranslation.z + moveDirection.current.z * forwardVector.z + moveDirection.current.x * leftVector.z,
-    };
+      const moveSpeed = keys.has('Shift') ? 30 : 5;
+      moveDirection.current.normalize().multiplyScalar(moveSpeed * delta);
 
-    playerRef.current.setTranslation(newTranslation, true);
+      if (keys.has('ArrowLeft')) {
+        playerScene.rotation.y += Math.PI * delta;
+        playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
+      }
+      if (keys.has('ArrowRight')) {
+        playerScene.rotation.y -= Math.PI * delta;
+        playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
+      }
 
-    const groundedStatus = checkGrounded();
-    setGrounded(groundedStatus);
+      const currentTranslation = playerRef.current.translation();
+      const forwardVector = new THREE.Vector3(0, 0, 1).applyQuaternion(playerScene.quaternion);
 
-    if (groundedStatus && isJumping) {
-      setIsJumping(false);
+      const newTranslation = {
+        x: currentTranslation.x + moveDirection.current.z * forwardVector.x,
+        y: currentTranslation.y,
+        z: currentTranslation.z + moveDirection.current.z * forwardVector.z,
+      };
 
-      if (moveDirection.current.length() > 0) {
+      playerRef.current.setTranslation(newTranslation, true);
+
+      const groundedStatus = checkGrounded();
+      setGrounded(groundedStatus);
+
+      if (groundedStatus && isJumping) {
+        setIsJumping(false);
+      }
+
+      if (groundedStatus && moveDirection.current.length() > 0) {
         if (actions['walk']) {
           actions['walk'].play();
         }
+        if (actions['idle']) {
+          actions['idle'].stop();
+        }
       } else {
+        if (actions['walk']) {
+          actions['walk'].stop();
+        }
         if (actions['idle']) {
           actions['idle'].play();
         }
       }
-    }
 
-    const translation = playerRef.current.translation();
-    const targetPosition = new THREE.Vector3(translation.x, translation.y, translation.z);
-    const cameraTarget = targetPosition.clone().add(cameraOffset);
+      const translation = playerRef.current.translation();
+      const targetPosition = new THREE.Vector3(translation.x, translation.y, translation.z);
+      const cameraPosition = targetPosition.clone().add(cameraOffset.clone().applyQuaternion(playerScene.quaternion));
 
-    camera.position.lerp(cameraTarget, 0.1);
-    camera.lookAt(targetPosition.x, targetPosition.y + 1, targetPosition.z);
+      camera.position.lerp(cameraPosition, 0.05); // Lowering the factor for smoother interpolation
+      camera.lookAt(targetPosition.x, targetPosition.y + 1, targetPosition.z);
 
-    playerScene.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
+      playerScene.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
 
-    if (moveDirection.current.length() > 0) {
-      if (actions['walk']) {
-        actions['walk'].play();
-      }
-      if (actions['idle']) {
-        actions['idle'].stop();
-      }
-    } else {
-      if (actions['walk']) {
-        actions['walk'].stop();
-      }
-      if (actions['idle']) {
-        actions['idle'].play();
+      // Check if player has fallen off the ground
+      if (translation.y < -10) {
+        onPlayerFall();
+        restart();
       }
     }
   });
+
+  const handleCollision = ({ other }) => {
+    const objectName = other.rigidBodyObject?.name || 'unknown';
+    if (objectName === 'YellowBox') {
+      onPlayerFall();
+    } else if (objectName !== 'ground') {
+      setHitObjects((prevHitObjects) => {
+        const newHitObjects = new Set(prevHitObjects);
+        newHitObjects.add(objectName);
+        onPlayerHit(newHitObjects.size, objectName); // Update progress based on the number of unique objects hit
+        return newHitObjects;
+      });
+    }
+  };
 
   return (
     <RigidBody
@@ -160,6 +206,8 @@ const ThirdPersonController = () => {
       gravityScale={1}
       linearDamping={0}
       angularDamping={0}
+      name="player"
+      onCollisionEnter={handleCollision}
     >
       <primitive object={playerScene} />
       <CuboidCollider args={[0.5, 1, 0.5]} position={[0, 1, 0]} />

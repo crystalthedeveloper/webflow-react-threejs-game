@@ -5,9 +5,9 @@ import { Box } from '@react-three/drei';
 
 const Ground = (props) => {
   return (
-    <RigidBody type="fixed">
-      <Box args={[100, 1, 100]} {...props}>
-        <meshStandardMaterial color="green" />
+    <RigidBody type="fixed" name='ground' colliders="cuboid">
+      <Box args={[500, 1, 500]} {...props}>
+        <meshStandardMaterial color="black" opacity={0.1} transparent={true}/>
       </Box>
     </RigidBody>
   );

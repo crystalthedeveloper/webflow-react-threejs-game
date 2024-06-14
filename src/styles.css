@@ -1,4 +1,7 @@
-html, body, #root {
+/* path: src/styles.css */
+html,
+body,
+#root {
   -webkit-font-smoothing: antialiased;
   position: fixed;
   top: 0;
@@ -10,43 +13,63 @@ html, body, #root {
   margin: 0;
   padding: 0;
 }
+
 .canvas {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.logo-image {
-  width: 200px; /* Set the width */
-  height: auto; /* Automatically adjust height to maintain aspect ratio */
-}
-
-.nav { 
+/* nav */
+.nav {
   position: absolute;
   display: flex;
-  flex-direction:  row;
+  flex-direction: row;
   flex-wrap: nowrap;
-  }
+  width: 100%;
+  z-index: 99;
+}
 
-.progress-bar-wrap { 
+/* logo */
+.logo-image {
+  width: 200px;
+  height: auto;
+  /* Automatically adjust height to maintain aspect ratio */
+}
+
+/* Timer */
+.timer {
+  font-size: 20px;
+  font-weight: bold;
+  padding-right: 4px;
+  color: #fff;
+}
+
+/* total items */
+.total-items {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  width: 200px;
+  padding-left: 4px;
+}
+
+/* progress bar */
+.progress-bar-wrap {
   display: flex;
-  padding: 4px 0px 0px 0px;
   flex-direction: column;
   flex-wrap: nowrap;
   grid-column-gap: 0px;
   grid-row-gap: 0px;
-  width: 200px;
+  width: 100%;
 }
-.progress-bar-image-wrap{
+
+.progress-bar-timer-wrap {
   display: flex;
   justify-content: flex-start;
   align-items: center;
   grid-column-gap: 0px;
   grid-row-gap: 10px;
-}
-.progress-bar-image{
-  width: 30px; /* Set the width */
-  height: auto; /* Automatically adjust height to maintain aspect ratio */
 }
 
 .progress-bar {
@@ -59,7 +82,34 @@ html, body, #root {
 .progress-bar-inner {
   width: 0;
   height: 20px;
-  background-color: #007bff;
+  background-color: #ffe600;
   transition: width 0.3s ease-in-out;
 }
 
+/* popup */
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border: 1px solid #ccc;
+  z-index: 1000;
+}
+
+.popup-content {
+  text-align: center;
+}
+
+.popup-button {
+  margin: 10px;
+  padding: 10px 20px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+.popup-button:hover {
+  background-color: #e0e0e0;
+}
