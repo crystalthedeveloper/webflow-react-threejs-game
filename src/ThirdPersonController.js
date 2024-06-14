@@ -28,7 +28,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
   const setCameraPhase = useGame((state) => state.setCameraPhase);
 
   useEffect(() => {
-    camera.position.set(0, 2, 5);
+    camera.position.set(0, 2, 10); // Starting further away from the player
     camera.lookAt(new THREE.Vector3(0, 1, 0));
 
     playerScene.rotation.y = Math.PI;
@@ -98,17 +98,28 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
     if (!playerRef.current) return;
 
     if (cameraPhase === 'overview') {
-      // Set initial cinematic camera position and target
-      const cinematicPosition = new THREE.Vector3(10, 10, 10);
-      const targetPosition = new THREE.Vector3(0, 0, 0);
+      // Cinematic camera movement from front to back of the player
+      const elapsedTime = state.clock.getElapsedTime();
+      const duration = 5; // Duration of the cinematic view (5 seconds)
+      const t = Math.min(elapsedTime / duration, 1); // Normalized time between 0 and 1
 
-      camera.position.lerp(cinematicPosition, 0.05); // Adjust the lerp factor for the desired smoothness
-      camera.lookAt(targetPosition);
+      const startPosition = new THREE.Vector3(0, 2, 20); // Start position further in front of the player
+      const endPosition = new THREE.Vector3(0, 2, -10); // End position behind the player
 
-      // Transition to player's camera view after some time
-      setTimeout(() => {
+      const playerPosition = playerRef.current.translation();
+      const cinematicPosition = new THREE.Vector3(
+        THREE.MathUtils.lerp(startPosition.x, endPosition.x, t),
+        THREE.MathUtils.lerp(startPosition.y, endPosition.y, t),
+        THREE.MathUtils.lerp(startPosition.z, endPosition.z, t)
+      ).add(playerPosition);
+
+      camera.position.lerp(cinematicPosition, 0.05); // Adjust the lerp factor for smoothness
+      camera.lookAt(playerPosition);
+
+      // Transition to player's camera view after the cinematic view ends
+      if (t >= 1) {
         setCameraPhase('player');
-      }, 3000); // Duration of the cinematic view
+      }
     } else if (cameraPhase === 'player') {
       moveDirection.current.set(0, 0, 0);
 

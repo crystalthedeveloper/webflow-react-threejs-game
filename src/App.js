@@ -10,7 +10,7 @@ import { Physics } from '@react-three/rapier';
 const App = () => {
   const [progress, setProgress] = useState(0); // Initialize progress to 0
   const [timer, setTimer] = useState(0); // Timer state
-  const [totalItems, setTotalItems] = useState(0); // Total Text3DItem components
+  const [totalItems, setTotalItems] = useState(36); // Total items (35 3D text + 1 red box)
   const [collectedItems, setCollectedItems] = useState(0); // Collected items
   const [showPopup, setShowPopup] = useState(false); // State for showing popup
   const intervalRef = useRef(null); // Ref for storing the interval ID
@@ -48,16 +48,16 @@ const App = () => {
 
   const updateProgress = (newCollectedItems, itemName) => {
     setCollectedItems(newCollectedItems);
-    if (newCollectedItems >= 2) { // Update this to match your winning condition
+    if (newCollectedItems >= totalItems) { // Update this to match your winning condition
       const formattedTime = formatTime(timer);
-      setPopupMessage(`Congrats, you won!<br />Your time: ${formattedTime}`);
+      setPopupMessage(`Congrats, you won!<br />You collected ${newCollectedItems} items.<br />Your time: ${formattedTime}`);
       setShowPopup(true);
       clearInterval(intervalRef.current); // Stop the timer
     }
   };
 
   const handleItemsLoaded = (itemsCount) => {
-    setTotalItems(itemsCount);
+    setTotalItems(itemsCount + 1); // Add 1 for the red box
   };
 
   const saveGame = () => {
@@ -67,7 +67,7 @@ const App = () => {
 
   const handlePlayerFall = () => {
     const formattedTime = formatTime(timer);
-    setPopupMessage(`Sorry, you died.<br />Your time: ${formattedTime}`);
+    setPopupMessage(`Sorry, you died.<br />You collected ${collectedItems} items.<br />Your time: ${formattedTime}`);
     setShowPopup(true);
     clearInterval(intervalRef.current); // Stop the timer
   };
