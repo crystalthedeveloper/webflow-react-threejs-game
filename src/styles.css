@@ -119,3 +119,40 @@ body,
 .popup-button:hover {
   background-color: #555;
 }
+
+/* Menu styles */
+.menu {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 1000;
+}
+
+.menu h1 {
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.menu .instructions {
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.menu-button {
+  margin: 10px;
+  padding: 10px 20px;
+  background-color: #333;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.menu-button:hover {
+  background-color: #555;
+}

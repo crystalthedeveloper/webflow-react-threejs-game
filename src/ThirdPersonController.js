@@ -22,10 +22,10 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
   const [jumpCooldown, setJumpCooldown] = useState(false);
   const jumpStrength = 20;
   const jumpCooldownTime = 500;
-  const restart = useGame((state) => state.restart);
   const [hitObjects, setHitObjects] = useState(new Set());
   const cameraPhase = useGame((state) => state.cameraPhase);
   const setCameraPhase = useGame((state) => state.setCameraPhase);
+  const resetPlayerPosition = useGame((state) => state.resetPlayerPosition);
 
   useEffect(() => {
     camera.position.set(0, 2, 10); // Starting further away from the player
@@ -39,6 +39,12 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
       actions['idle'].play();
     }
   }, [camera, scene, playerScene, actions]);
+
+  useEffect(() => {
+    if (resetPlayerPosition && playerRef.current) {
+      playerRef.current.setTranslation({ x: 0, y: 2, z: 0 }, true);
+    }
+  }, [resetPlayerPosition]);
 
   const checkGrounded = () => {
     if (!playerRef.current) return false;
@@ -184,7 +190,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
       // Check if player has fallen off the ground
       if (translation.y < -10) {
         onPlayerFall();
-        restart();
+        // No restart here, handle in App.js
       }
     }
   });

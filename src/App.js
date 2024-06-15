@@ -1,9 +1,11 @@
 // path: src/App.js
 import React, { useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { Loader, useProgress } from '@react-three/drei';
 import NavigationBar from './components/NavigationBar';
 import Scene from './components/Scene';
 import Popup from './components/Popup';
+import Menu from './components/Menu';
 import useGame from './hooks/useGame';
 import { Physics } from '@react-three/rapier';
 
@@ -18,17 +20,21 @@ const App = () => {
 
   const phase = useGame((state) => state.phase);
   const start = useGame((state) => state.start);
+  const loadComplete = useGame((state) => state.loadComplete);
+  const beginPlaying = useGame((state) => state.beginPlaying);
   const restart = useGame((state) => state.restart);
+  const playerDied = useGame((state) => state.playerDied);
+  const resetPlayerPosition = useGame((state) => state.resetPlayerPosition);
+  const resetPlayerPositionDone = useGame((state) => state.resetPlayerPositionDone);
+
+  const { active, progress: loadingProgress } = useProgress();
 
   useEffect(() => {
+    console.log('Phase:', phase);
     if (phase === 'playing') {
       intervalRef.current = setInterval(() => {
         setTimer((prevTimer) => prevTimer + 1);
       }, 1000);
-    } else if (phase === 'ready') {
-      setTimer(0);
-      setCollectedItems(0);
-      setProgress(0);
     }
     return () => clearInterval(intervalRef.current);
   }, [phase]);
@@ -39,6 +45,12 @@ const App = () => {
       setProgress(newProgress);
     }
   }, [collectedItems, totalItems]);
+
+  useEffect(() => {
+    if (resetPlayerPosition) {
+      resetPlayerPositionDone();
+    }
+  }, [resetPlayerPosition, resetPlayerPositionDone]);
 
   const formatTime = (time) => {
     const minutes = Math.floor(time / 60);
@@ -70,16 +82,36 @@ const App = () => {
     setPopupMessage(`Sorry, you died.<br />You collected ${collectedItems} items.<br />Your time: ${formattedTime}`);
     setShowPopup(true);
     clearInterval(intervalRef.current); // Stop the timer
+    playerDied();
   };
 
   const handleRestart = () => {
-    window.location.reload(); // Reload the page
+    setCollectedItems(0);
+    setProgress(0);
+    setTimer(0);
+    restart();
+    setShowPopup(false); // Hide the popup after restarting
   };
+
+  useEffect(() => {
+    if (phase === 'loading' && !active) {
+      loadComplete();
+    }
+  }, [phase, active, loadComplete]);
+
+  useEffect(() => {
+    if (phase === 'ready' && !active) {
+      beginPlaying();
+    }
+  }, [phase, active, beginPlaying]);
+
+  console.log('Loader active:', active);
+  console.log('Game phase:', phase);
 
   return (
     <>
       <NavigationBar progress={progress} timer={timer} totalItems={totalItems} />
-      <Canvas className="canvas" onCreated={() => start()}>
+      <Canvas className="canvas">
         <Physics gravity={[0, -9.81, 0]}>
           {phase === 'playing' && (
             <Scene
@@ -90,16 +122,40 @@ const App = () => {
           )}
         </Physics>
       </Canvas>
+      {active && (
+        <Loader
+          containerStyles={{
+            backgroundColor: 'rgba(0, 0, 0, 1)',
+            zIndex: 1000,
+          }}
+          barStyles={{
+            height: '10px',
+            width: '300px',
+            backgroundColor: '#fff',
+          }}
+          dataStyles={{
+            fontSize: '16px',
+            color: '#fff',
+          }}
+          innerStyles={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{ color: '#fff', marginTop: '20px' }}>
+            Loading: {loadingProgress.toFixed(2)}%
+          </div>
+        </Loader>
+      )}
+      {!active && phase === 'initialMenu' && <Menu />}
+      {!active && phase === 'ready' && <button onClick={beginPlaying} className="start-button">Start Game</button>}
       {showPopup && (
         <Popup message={popupMessage}>
           <button onClick={handleRestart} className="popup-button">Restart Game</button>
           <button onClick={saveGame} className="popup-button">Save Game</button>
         </Popup>
-      )}
-      {phase === 'ready' && (
-        <button onClick={start} className="start-button">
-          Start Game
-        </button>
       )}
     </>
   );

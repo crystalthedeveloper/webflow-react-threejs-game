@@ -1,6 +1,6 @@
 // path: src/components/Scene.js
 import React, { useEffect, useState, useMemo } from 'react';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls, Environment, useProgress } from '@react-three/drei';
 import * as THREE from 'three';
 import PhysicsWorld from './PhysicsWorld';
 import WhiteBox from './WhiteBox';
@@ -51,7 +51,7 @@ const Scene = ({ onItemsLoaded, updateProgress, onPlayerFall }) => {
   const [cloudPositions, setCloudPositions] = useState([]);
   const [whiteBoxPositions, setWhiteBoxPositions] = useState([]);
   const [yellowBoxPositions, setYellowBoxPositions] = useState([]);
-  const startGame = useGame((state) => state.start);
+  const { active, progress, errors, item, loaded, total } = useProgress();
 
   useEffect(() => {
     const cloudPositions = generatePositions(10, 50, [], [10, 30]);
@@ -62,9 +62,7 @@ const Scene = ({ onItemsLoaded, updateProgress, onPlayerFall }) => {
 
     const yellowBoxPositions = generatePositions(10, 20, [...cloudPositions, ...whiteBoxPositions], [5, 10]);
     setYellowBoxPositions(yellowBoxPositions);
-
-    startGame(); // Start the game which will trigger the camera transition
-  }, [startGame]);
+  }, []);
 
   const cloudElements = useMemo(() =>
     cloudPositions.map((pos, index) => (
