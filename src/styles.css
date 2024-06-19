@@ -138,9 +138,14 @@ body,
   margin-bottom: 20px;
 }
 
-.menu .instructions {
+.menu .instructions{
   color: #fff;
   margin-bottom: 20px;
+  line-height: 28px;
+}
+
+.contact-info, a, .good-luck{
+  color: #ffe600;
 }
 
 .menu-button {

@@ -1,4 +1,4 @@
-// path: src/components/Scene.js
+// src/components/Scene.js
 import React, { useEffect, useState, useMemo } from 'react';
 import { OrbitControls, Environment, useProgress } from '@react-three/drei';
 import * as THREE from 'three';

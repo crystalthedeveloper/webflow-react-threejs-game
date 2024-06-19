@@ -1,4 +1,4 @@
-// path: src/ThirdPersonController.js
+// src/ThirdPersonController.js
 import React, { useRef, useEffect, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useGLTF, useAnimations } from '@react-three/drei';
@@ -14,12 +14,15 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
   const { scene: playerScene, animations } = useGLTF('/playerModel.glb');
   const { actions } = useAnimations(animations, playerScene);
   const moveDirection = useRef(new THREE.Vector3(0, 0, 0));
-  const cameraOffset = new THREE.Vector3(0, 1.6, 5); // Adjusted for better view
+  const cameraOffset = new THREE.Vector3(0, 1.6, 4); // Adjusted for better view
 
-  const { rapier, world } = useRapier(); // Get the rapier world object
+  const { rapier, world } = useRapier();
   const [grounded, setGrounded] = useState(false);
   const [isJumping, setIsJumping] = useState(false);
   const [jumpCooldown, setJumpCooldown] = useState(false);
+  const [shiftPressed, setShiftPressed] = useState(false); // Track Shift key state
+  const [upPressed, setUpPressed] = useState(false); // Track Up Arrow key state
+  const [isRunning, setIsRunning] = useState(false); // Track if the player is running
   const jumpStrength = 20;
   const jumpCooldownTime = 500;
   const [hitObjects, setHitObjects] = useState(new Set());
@@ -27,8 +30,12 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
   const setCameraPhase = useGame((state) => state.setCameraPhase);
   const resetPlayerPosition = useGame((state) => state.resetPlayerPosition);
 
+  const hitSound = new Audio('/sounds/hit.mp3');
+  const redBoxSound = new Audio('/sounds/redBoxHit.mp3');
+  const diedSound = new Audio('/sounds/died.mp3');
+
   useEffect(() => {
-    camera.position.set(0, 2, 10); // Starting further away from the player
+    camera.position.set(0, 1.6, 4); // Starting further away from the player
     camera.lookAt(new THREE.Vector3(0, 1, 0));
 
     playerScene.rotation.y = Math.PI;
@@ -51,7 +58,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
 
     const origin = {
       x: playerRef.current.translation().x,
-      y: playerRef.current.translation().y - 0.5, // small offset to avoid starting inside the player's collider
+      y: playerRef.current.translation().y - 0.5,
       z: playerRef.current.translation().z,
     };
 
@@ -61,7 +68,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
     });
 
     if (hit && hit.collider) {
-      const isGrounded = hit.toi >= 0 && hit.toi < 1.1; // Adjust condition to include toi of 0
+      const isGrounded = hit.toi >= 0 && hit.toi < 1.1;
       setGrounded(isGrounded);
       return isGrounded;
     }
@@ -72,6 +79,15 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
 
   useEffect(() => {
     const handleKeyDown = (event) => {
+      if (event.key === 'Shift') {
+        console.log('Shift key down');
+        setShiftPressed(true);
+      }
+      if (event.key === 'ArrowUp') {
+        console.log('Up Arrow key down');
+        setUpPressed(true);
+      }
+
       if (event.key === ' ' && grounded && !isJumping && !jumpCooldown) {
         playerRef.current.applyImpulse({ x: 0, y: jumpStrength, z: 0 }, true);
         setIsJumping(true);
@@ -81,6 +97,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
         }, jumpCooldownTime);
 
         if (actions['jump']) {
+          console.log('Playing jump animation');
           actions['jump'].reset().fadeIn(0.2).play();
           actions['jump'].loop = THREE.LoopOnce;
           actions['jump'].clampWhenFinished = true;
@@ -91,12 +108,31 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
         if (actions['walk']) {
           actions['walk'].fadeOut(0.2);
         }
+        if (actions['run']) {
+          actions['run'].fadeOut(0.2);
+        }
+        if (actions['backward']) {
+          actions['backward'].fadeOut(0.2);
+        }
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      if (event.key === 'Shift') {
+        console.log('Shift key up');
+        setShiftPressed(false);
+      }
+      if (event.key === 'ArrowUp') {
+        console.log('Up Arrow key up');
+        setUpPressed(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, [grounded, isJumping, jumpCooldown, actions]);
 
@@ -104,53 +140,63 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
     if (!playerRef.current) return;
 
     if (cameraPhase === 'overview') {
-      // Cinematic camera movement from front to back of the player
       const elapsedTime = state.clock.getElapsedTime();
-      const duration = 5; // Duration of the cinematic view (5 seconds)
-      const t = Math.min(elapsedTime / duration, 1); // Normalized time between 0 and 1
+      const duration = 5;
+      const angle = (elapsedTime / duration) * Math.PI * 1; // Full circle over duration
 
-      const startPosition = new THREE.Vector3(0, 2, 20); // Start position further in front of the player
-      const endPosition = new THREE.Vector3(0, 2, -10); // End position behind the player
-
+      const radius = 3; // Distance from the player
       const playerPosition = playerRef.current.translation();
-      const cinematicPosition = new THREE.Vector3(
-        THREE.MathUtils.lerp(startPosition.x, endPosition.x, t),
-        THREE.MathUtils.lerp(startPosition.y, endPosition.y, t),
-        THREE.MathUtils.lerp(startPosition.z, endPosition.z, t)
-      ).add(playerPosition);
+      const x = playerPosition.x + radius * Math.cos(angle);
+      const z = playerPosition.z + radius * Math.sin(angle);
+      const y = playerPosition.y + 1; // Height of the camera
 
-      camera.position.lerp(cinematicPosition, 0.05); // Adjust the lerp factor for smoothness
-      camera.lookAt(playerPosition);
+      camera.position.lerp(new THREE.Vector3(x, y, z), 0.05);
+      camera.lookAt(playerPosition.x, playerPosition.y + 1, playerPosition.z);
 
-      // Transition to player's camera view after the cinematic view ends
-      if (t >= 1) {
+      if (elapsedTime >= duration) {
         setCameraPhase('player');
       }
     } else if (cameraPhase === 'player') {
       moveDirection.current.set(0, 0, 0);
 
+      const shouldRun = shiftPressed && upPressed;
+      if (shouldRun !== isRunning) {
+        setIsRunning(shouldRun);
+        console.log('Running state changed:', shouldRun);
+        if (shouldRun) {
+          if (actions['walk'] && actions['walk'].isRunning()) {
+            actions['walk'].fadeOut(0.2).stop();
+          }
+          if (actions['run'] && !actions['run'].isRunning()) {
+            console.log('Playing run animation');
+            actions['run'].reset().fadeIn(0.2).play();
+          }
+        } else {
+          if (actions['run'] && actions['run'].isRunning()) {
+            console.log('Stopping run animation');
+            actions['run'].fadeOut(0.2).stop();
+          }
+        }
+      }
+
+      const moveSpeed = shouldRun ? 30 : 5;
+      const cameraLerpFactor = shouldRun ? 0.1 : 0.05;
+
       if (keys.has('ArrowUp')) moveDirection.current.z -= 1;
       if (keys.has('ArrowDown')) moveDirection.current.z += 1;
+      if (keys.has('ArrowLeft')) moveDirection.current.x -= 1;
+      if (keys.has('ArrowRight')) moveDirection.current.x += 1;
 
-      const moveSpeed = keys.has('Shift') ? 30 : 5;
       moveDirection.current.normalize().multiplyScalar(moveSpeed * delta);
-
-      if (keys.has('ArrowLeft')) {
-        playerScene.rotation.y += Math.PI * delta;
-        playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
-      }
-      if (keys.has('ArrowRight')) {
-        playerScene.rotation.y -= Math.PI * delta;
-        playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
-      }
 
       const currentTranslation = playerRef.current.translation();
       const forwardVector = new THREE.Vector3(0, 0, 1).applyQuaternion(playerScene.quaternion);
+      const rightVector = new THREE.Vector3(1, 0, 0).applyQuaternion(playerScene.quaternion);
 
       const newTranslation = {
-        x: currentTranslation.x + moveDirection.current.z * forwardVector.x,
+        x: currentTranslation.x + moveDirection.current.z * forwardVector.x + moveDirection.current.x * rightVector.x,
         y: currentTranslation.y,
-        z: currentTranslation.z + moveDirection.current.z * forwardVector.z,
+        z: currentTranslation.z + moveDirection.current.z * forwardVector.z + moveDirection.current.x * rightVector.z,
       };
 
       playerRef.current.setTranslation(newTranslation, true);
@@ -163,50 +209,87 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
       }
 
       if (groundedStatus && moveDirection.current.length() > 0) {
-        if (actions['walk']) {
-          actions['walk'].play();
+        if (shouldRun) {
+          console.log('Running');
+          if (actions['run'] && !actions['run'].isRunning()) {
+            console.log('Playing run animation');
+            actions['run'].reset().fadeIn(0.2).play();
+          }
+        } else if (keys.has('ArrowDown')) {
+          console.log('Walking backward');
+          if (actions['backward']) {
+            actions['backward'].play();
+          }
+        } else {
+          console.log('Walking');
+          if (actions['walk'] && !actions['walk'].isRunning()) {
+            console.log('Playing walk animation');
+            actions['walk'].reset().fadeIn(0.2).play();
+          }
         }
         if (actions['idle']) {
           actions['idle'].stop();
         }
       } else {
-        if (actions['walk']) {
+        if (actions['run'] && actions['run'].isRunning()) {
+          actions['run'].stop();
+        }
+        if (actions['walk'] && actions['walk'].isRunning()) {
           actions['walk'].stop();
+        }
+        if (actions['backward']) {
+          actions['backward'].stop();
         }
         if (actions['idle']) {
           actions['idle'].play();
         }
       }
 
+      if (keys.has('ArrowLeft')) {
+        playerScene.rotation.y += Math.PI * delta;
+        playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
+      } else if (keys.has('ArrowRight')) {
+        playerScene.rotation.y -= Math.PI * delta;
+        playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
+      }
+
       const translation = playerRef.current.translation();
       const targetPosition = new THREE.Vector3(translation.x, translation.y, translation.z);
       const cameraPosition = targetPosition.clone().add(cameraOffset.clone().applyQuaternion(playerScene.quaternion));
 
-      camera.position.lerp(cameraPosition, 0.05); // Lowering the factor for smoother interpolation
+      camera.position.lerp(cameraPosition, cameraLerpFactor);
       camera.lookAt(targetPosition.x, targetPosition.y + 1, targetPosition.z);
 
       playerScene.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
 
-      // Check if player has fallen off the ground
       if (translation.y < -10) {
+        diedSound.play(); // Play the fall sound
         onPlayerFall();
-        // No restart here, handle in App.js
       }
     }
   });
 
   const handleCollision = ({ other }) => {
     const objectName = other.rigidBodyObject?.name || 'unknown';
-    if (objectName === 'YellowBox') {
-      onPlayerFall();
-    } else if (objectName !== 'ground') {
-      setHitObjects((prevHitObjects) => {
-        const newHitObjects = new Set(prevHitObjects);
-        newHitObjects.add(objectName);
-        onPlayerHit(newHitObjects.size, objectName); // Update progress based on the number of unique objects hit
-        return newHitObjects;
-      });
+    if (objectName === 'ground') {
+      return; // Ignore collision with ground
     }
+    let soundToPlay = hitSound;
+
+    if (objectName === 'RedBox') {
+      soundToPlay = redBoxSound;
+    } else if (objectName === 'YellowBox') {
+      onPlayerFall();
+      soundToPlay = diedSound;
+    }
+
+    setHitObjects((prevHitObjects) => {
+      const newHitObjects = new Set(prevHitObjects);
+      newHitObjects.add(objectName);
+      onPlayerHit(newHitObjects.size, objectName);
+      soundToPlay.play();
+      return newHitObjects;
+    });
   };
 
   return (

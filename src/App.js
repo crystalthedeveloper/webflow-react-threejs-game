@@ -1,4 +1,4 @@
-// path: src/App.js
+// src/App.js
 import React, { useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Loader, useProgress } from '@react-three/drei';
@@ -10,13 +10,14 @@ import useGame from './hooks/useGame';
 import { Physics } from '@react-three/rapier';
 
 const App = () => {
-  const [progress, setProgress] = useState(0); // Initialize progress to 0
-  const [timer, setTimer] = useState(0); // Timer state
-  const [totalItems, setTotalItems] = useState(36); // Total items (35 3D text + 1 red box)
-  const [collectedItems, setCollectedItems] = useState(0); // Collected items
-  const [showPopup, setShowPopup] = useState(false); // State for showing popup
-  const intervalRef = useRef(null); // Ref for storing the interval ID
-  const [popupMessage, setPopupMessage] = useState(''); // State for popup message
+  const [progress, setProgress] = useState(0);
+  const [timer, setTimer] = useState(0);
+  const [totalItems, setTotalItems] = useState(36);
+  const [collectedItems, setCollectedItems] = useState(0);
+  const [showPopup, setShowPopup] = useState(false);
+  const intervalRef = useRef(null);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const phase = useGame((state) => state.phase);
   const start = useGame((state) => state.start);
@@ -26,11 +27,11 @@ const App = () => {
   const playerDied = useGame((state) => state.playerDied);
   const resetPlayerPosition = useGame((state) => state.resetPlayerPosition);
   const resetPlayerPositionDone = useGame((state) => state.resetPlayerPositionDone);
+  const setCameraPhase = useGame((state) => state.setCameraPhase);
 
   const { active, progress: loadingProgress } = useProgress();
 
   useEffect(() => {
-    console.log('Phase:', phase);
     if (phase === 'playing') {
       intervalRef.current = setInterval(() => {
         setTimer((prevTimer) => prevTimer + 1);
@@ -60,28 +61,27 @@ const App = () => {
 
   const updateProgress = (newCollectedItems, itemName) => {
     setCollectedItems(newCollectedItems);
-    if (newCollectedItems >= totalItems) { // Update this to match your winning condition
+    if (newCollectedItems >= totalItems) {
       const formattedTime = formatTime(timer);
       setPopupMessage(`Congrats, you won!<br />You collected ${newCollectedItems} items.<br />Your time: ${formattedTime}`);
       setShowPopup(true);
-      clearInterval(intervalRef.current); // Stop the timer
+      clearInterval(intervalRef.current);
     }
   };
 
   const handleItemsLoaded = (itemsCount) => {
-    setTotalItems(itemsCount + 1); // Add 1 for the red box
+    setTotalItems(itemsCount + 1);
   };
 
   const saveGame = () => {
-    // Save the game with the player's time
-    setShowPopup(false); // Hide popup after saving
+    setShowPopup(false);
   };
 
   const handlePlayerFall = () => {
     const formattedTime = formatTime(timer);
     setPopupMessage(`Sorry, you died.<br />You collected ${collectedItems} items.<br />Your time: ${formattedTime}`);
     setShowPopup(true);
-    clearInterval(intervalRef.current); // Stop the timer
+    clearInterval(intervalRef.current);
     playerDied();
   };
 
@@ -90,7 +90,7 @@ const App = () => {
     setProgress(0);
     setTimer(0);
     restart();
-    setShowPopup(false); // Hide the popup after restarting
+    setShowPopup(false);
   };
 
   useEffect(() => {
@@ -101,16 +101,14 @@ const App = () => {
 
   useEffect(() => {
     if (phase === 'ready' && !active) {
+      setCameraPhase('overview');
       beginPlaying();
     }
-  }, [phase, active, beginPlaying]);
-
-  console.log('Loader active:', active);
-  console.log('Game phase:', phase);
+  }, [phase, active, beginPlaying, setCameraPhase]);
 
   return (
     <>
-      <NavigationBar progress={progress} timer={timer} totalItems={totalItems} />
+      {!menuOpen && !active && <NavigationBar progress={progress} timer={timer} totalItems={totalItems} />}
       <Canvas className="canvas">
         <Physics gravity={[0, -9.81, 0]}>
           {phase === 'playing' && (
@@ -149,7 +147,7 @@ const App = () => {
           </div>
         </Loader>
       )}
-      {!active && phase === 'initialMenu' && <Menu />}
+      {!active && phase === 'initialMenu' && <Menu setMenuOpen={setMenuOpen} />}
       {!active && phase === 'ready' && <button onClick={beginPlaying} className="start-button">Start Game</button>}
       {showPopup && (
         <Popup message={popupMessage}>

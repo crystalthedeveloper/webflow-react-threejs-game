@@ -2,8 +2,10 @@
 import React from 'react';
 import '../styles.css';
 
-const NavigationBar = ({ progress, timer, totalItems }) => {
+const NavigationBar = ({ progress, timer, totalItems, active }) => {
   const progressPercentage = progress * 100;
+
+  if (active) return null;
 
   return (
     <nav className="nav">
