@@ -1,4 +1,5 @@
 /* path: src/styles.css */
+/* styles.css */
 html,
 body,
 #root {
@@ -20,19 +21,20 @@ body,
   display: block;
 }
 
-/* nav */
+/* Navigation Bar */
 .nav {
   position: absolute;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-wrap: nowrap;
-  width: 100%;
+  width: 20%;
   z-index: 99;
+  align-items: center;
 }
 
-/* logo */
+/* Logo */
 .logo-image {
-  width: 200px;
+  width: 178px;
   height: auto;
   /* Automatically adjust height to maintain aspect ratio */
 }
@@ -42,26 +44,26 @@ body,
   font-size: 20px;
   font-weight: bold;
   padding-right: 4px;
-  color: #fff;
+  color: #ffe600;
 }
 
-/* total items */
+/* Total items */
 .total-items {
   font-size: 20px;
   font-weight: bold;
-  color: #fff;
-  width: 200px;
+  color: #ffe600;
   padding-left: 4px;
 }
 
-/* progress bar */
+/* Progress bar */
 .progress-bar-wrap {
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
   grid-column-gap: 0px;
   grid-row-gap: 0px;
-  width: 100%;
+  width: 50%;
+  margin-top: -26px;
 }
 
 .progress-bar-timer-wrap {
@@ -86,10 +88,10 @@ body,
   transition: width 0.3s ease-in-out;
 }
 
-/* popup */
+/* Popup */
 .popup {
   position: fixed;
-  top: 50%;
+  top: 46%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: #000;
@@ -98,7 +100,7 @@ body,
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.2);
   z-index: 1000;
-  width: 300px;
+  min-width: 300px;
   max-width: 80%;
 }
 
@@ -123,7 +125,7 @@ body,
 /* Menu styles */
 .menu {
   position: fixed;
-  top: 50%;
+  top: 46%;
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
@@ -131,6 +133,7 @@ body,
   padding: 20px;
   border-radius: 10px;
   z-index: 1000;
+  min-width: 300px;
 }
 
 .menu h1 {
@@ -138,13 +141,13 @@ body,
   margin-bottom: 20px;
 }
 
-.menu .instructions{
+.menu .instructions {
   color: #fff;
   margin-bottom: 20px;
   line-height: 28px;
 }
 
-.contact-info, a, .good-luck{
+.contact-info, a, .good-luck {
   color: #ffe600;
 }
 
@@ -160,4 +163,25 @@ body,
 
 .menu-button:hover {
   background-color: #555;
+}
+/*  mobile controls */
+.mobile-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+
+.control-button {
+  width: 60px;
+  height: 60px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffe600;
+  cursor: pointer;
 }

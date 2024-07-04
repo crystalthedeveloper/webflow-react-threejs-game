@@ -7,6 +7,8 @@ import Scene from './components/Scene';
 import Popup from './components/Popup';
 import Menu from './components/Menu';
 import useGame from './hooks/useGame';
+import useMobileControls from './hooks/useMobileControls';
+import MobileControls from './components/MobileControls';
 import { Physics } from '@react-three/rapier';
 
 const App = () => {
@@ -18,8 +20,12 @@ const App = () => {
   const intervalRef = useRef(null);
   const [popupMessage, setPopupMessage] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  const { mobileControls, handleTouchStart, handleTouchEnd } = useMobileControls();
 
   const phase = useGame((state) => state.phase);
+  const cameraTransitionComplete = useGame((state) => state.cameraTransitionComplete);
   const start = useGame((state) => state.start);
   const loadComplete = useGame((state) => state.loadComplete);
   const beginPlaying = useGame((state) => state.beginPlaying);
@@ -28,17 +34,37 @@ const App = () => {
   const resetPlayerPosition = useGame((state) => state.resetPlayerPosition);
   const resetPlayerPositionDone = useGame((state) => state.resetPlayerPositionDone);
   const setCameraPhase = useGame((state) => state.setCameraPhase);
+  const startTimer = useGame((state) => state.startTimer);
+  const startTime = useGame((state) => state.startTime);
 
   const { active, progress: loadingProgress } = useProgress();
 
   useEffect(() => {
-    if (phase === 'playing') {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (phase === 'playing' && cameraTransitionComplete && !intervalRef.current) {
+      startTimer();
       intervalRef.current = setInterval(() => {
-        setTimer((prevTimer) => prevTimer + 1);
+        setTimer(Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
     }
-    return () => clearInterval(intervalRef.current);
-  }, [phase]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [phase, cameraTransitionComplete, startTime, startTimer]);
 
   useEffect(() => {
     if (totalItems > 0) {
@@ -116,32 +142,19 @@ const App = () => {
               onItemsLoaded={handleItemsLoaded}
               updateProgress={updateProgress}
               onPlayerFall={handlePlayerFall}
+              mobileControls={mobileControls}
             />
           )}
         </Physics>
       </Canvas>
+      {isMobile && cameraTransitionComplete && phase !== 'dead' && (
+        <MobileControls handleTouchStart={handleTouchStart} handleTouchEnd={handleTouchEnd} />
+      )}
       {active && (
-        <Loader
-          containerStyles={{
-            backgroundColor: 'rgba(0, 0, 0, 1)',
-            zIndex: 1000,
-          }}
-          barStyles={{
-            height: '10px',
-            width: '300px',
-            backgroundColor: '#fff',
-          }}
-          dataStyles={{
-            fontSize: '16px',
-            color: '#fff',
-          }}
-          innerStyles={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
+        <Loader containerStyles={{
+          backgroundColor: 'rgba(0, 0, 0, 1)',
+          zIndex: 1000,
+        }}>
           <div style={{ color: '#fff', marginTop: '20px' }}>
             Loading: {loadingProgress.toFixed(2)}%
           </div>

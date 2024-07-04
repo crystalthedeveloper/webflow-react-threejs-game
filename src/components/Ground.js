@@ -7,7 +7,7 @@ const Ground = (props) => {
   return (
     <RigidBody type="fixed" name='ground' colliders="cuboid">
       <Box args={[500, 1, 500]} {...props}>
-        <meshStandardMaterial color="black" opacity={0.1} transparent={true}/>
+        <meshStandardMaterial color="#000000" opacity={0.1} transparent={true}/>
       </Box>
     </RigidBody>
   );

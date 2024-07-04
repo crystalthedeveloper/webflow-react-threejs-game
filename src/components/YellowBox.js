@@ -7,7 +7,7 @@ const YellowBox = ({ position, scale }) => {
   return (
     <RigidBody type="dynamic" colliders="cuboid" position={position} name="YellowBox">
       <Box args={scale}>
-        <meshStandardMaterial color="#ffe600" />
+        <meshStandardMaterial color="#fff" />
       </Box>
     </RigidBody>
   );

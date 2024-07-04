@@ -1,4 +1,4 @@
-// path: src/hooks/useKeyboardControls.js
+// src/hooks/useKeyboardControls.js
 import { useState, useEffect } from 'react';
 
 const useKeyboardControls = () => {
@@ -19,12 +19,12 @@ const useKeyboardControls = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-
+    
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [keys]);
 
   return keys;
 };

@@ -7,300 +7,254 @@ import * as THREE from 'three';
 import useKeyboardControls from './hooks/useKeyboardControls';
 import useGame from './hooks/useGame';
 
-const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
+const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { up: false, down: false, left: false, right: false } }) => {
   const { camera, scene } = useThree();
   const keys = useKeyboardControls();
   const playerRef = useRef();
+  const colliderRef = useRef();
   const { scene: playerScene, animations } = useGLTF('/playerModel.glb');
   const { actions } = useAnimations(animations, playerScene);
   const moveDirection = useRef(new THREE.Vector3(0, 0, 0));
-  const cameraOffset = new THREE.Vector3(0, 1.6, 4); // Adjusted for better view
+  const cameraOffsetFront = new THREE.Vector3(0, 1.6, 3); 
+  const cameraOffsetBack = new THREE.Vector3(0, 1.6, 3);
+  const currentAction = useRef(null);
 
   const { rapier, world } = useRapier();
   const [grounded, setGrounded] = useState(false);
-  const [isJumping, setIsJumping] = useState(false);
-  const [jumpCooldown, setJumpCooldown] = useState(false);
-  const [shiftPressed, setShiftPressed] = useState(false); // Track Shift key state
-  const [upPressed, setUpPressed] = useState(false); // Track Up Arrow key state
-  const [isRunning, setIsRunning] = useState(false); // Track if the player is running
-  const jumpStrength = 20;
-  const jumpCooldownTime = 500;
   const [hitObjects, setHitObjects] = useState(new Set());
   const cameraPhase = useGame((state) => state.cameraPhase);
   const setCameraPhase = useGame((state) => state.setCameraPhase);
   const resetPlayerPosition = useGame((state) => state.resetPlayerPosition);
+  const setCameraTransitionComplete = useGame((state) => state.setCameraTransitionComplete);
 
-  const hitSound = new Audio('/sounds/hit.mp3');
-  const redBoxSound = new Audio('/sounds/redBoxHit.mp3');
-  const diedSound = new Audio('/sounds/died.mp3');
-
-  useEffect(() => {
-    camera.position.set(0, 1.6, 4); // Starting further away from the player
-    camera.lookAt(new THREE.Vector3(0, 1, 0));
-
-    playerScene.rotation.y = Math.PI;
-
-    scene.add(playerScene);
-
-    if (actions['idle']) {
-      actions['idle'].play();
-    }
-  }, [camera, scene, playerScene, actions]);
-
-  useEffect(() => {
-    if (resetPlayerPosition && playerRef.current) {
-      playerRef.current.setTranslation({ x: 0, y: 2, z: 0 }, true);
-    }
-  }, [resetPlayerPosition]);
-
-  const checkGrounded = () => {
-    if (!playerRef.current) return false;
-
-    const origin = {
-      x: playerRef.current.translation().x,
-      y: playerRef.current.translation().y - 0.5,
-      z: playerRef.current.translation().z,
-    };
-
-    const ray = new rapier.Ray(origin, { x: 0, y: -1, z: 0 });
-    const hit = world.castRay(ray, 1.1, true, (collider) => {
-      return collider !== playerRef.current.collider();
-    });
-
-    if (hit && hit.collider) {
-      const isGrounded = hit.toi >= 0 && hit.toi < 1.1;
-      setGrounded(isGrounded);
-      return isGrounded;
-    }
-
-    setGrounded(false);
-    return false;
+  const sounds = {
+    hit: new Audio('/sounds/hit.mp3'),
+    died: new Audio('/sounds/died.mp3'),
+    logo: new Audio('/sounds/logoHit.mp3'),
   };
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Shift') {
-        console.log('Shift key down');
-        setShiftPressed(true);
-      }
-      if (event.key === 'ArrowUp') {
-        console.log('Up Arrow key down');
-        setUpPressed(true);
-      }
+    initializePlayer();
+    if (resetPlayerPosition && playerRef.current) {
+      playerRef.current.setTranslation({ x: 0, y: 1, z: 0 }, true);
+    }
+  }, [resetPlayerPosition]);
 
-      if (event.key === ' ' && grounded && !isJumping && !jumpCooldown) {
-        playerRef.current.applyImpulse({ x: 0, y: jumpStrength, z: 0 }, true);
-        setIsJumping(true);
-        setJumpCooldown(true);
-        setTimeout(() => {
-          setJumpCooldown(false);
-        }, jumpCooldownTime);
+  const initializePlayer = () => {
+    camera.position.set(cameraOffsetFront.x, cameraOffsetFront.y, cameraOffsetFront.z);
+    camera.lookAt(new THREE.Vector3(0, 1, 0));
+    camera.far = 100;
+    camera.updateProjectionMatrix();
+    playerScene.rotation.y = Math.PI;
+    scene.add(playerScene);
+    playAction('idle');
+  };
 
-        if (actions['jump']) {
-          console.log('Playing jump animation');
-          actions['jump'].reset().fadeIn(0.2).play();
-          actions['jump'].loop = THREE.LoopOnce;
-          actions['jump'].clampWhenFinished = true;
-        }
-        if (actions['idle']) {
-          actions['idle'].fadeOut(0.2);
-        }
-        if (actions['walk']) {
-          actions['walk'].fadeOut(0.2);
-        }
-        if (actions['run']) {
-          actions['run'].fadeOut(0.2);
-        }
-        if (actions['backward']) {
-          actions['backward'].fadeOut(0.2);
-        }
-      }
+  const checkGrounded = () => {
+    if (!playerRef.current) return false;
+    const origin = {
+      x: playerRef.current.translation().x,
+      y: playerRef.current.translation().y - 0.6,
+      z: playerRef.current.translation().z,
     };
+    const ray = new rapier.Ray(origin, { x: 0, y: -1, z: 0 });
+    const hit = world.castRay(ray, 1.1, true, (collider) => collider !== playerRef.current.collider());
 
-    const handleKeyUp = (event) => {
-      if (event.key === 'Shift') {
-        console.log('Shift key up');
-        setShiftPressed(false);
-      }
-      if (event.key === 'ArrowUp') {
-        console.log('Up Arrow key up');
-        setUpPressed(false);
-      }
-    };
+    const isGrounded = hit && hit.toi >= 0 && hit.toi < 1.1;
+    setGrounded(isGrounded);
+    return isGrounded;
+  };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [grounded, isJumping, jumpCooldown, actions]);
+  const playAction = (actionName) => {
+    if (currentAction.current === actionName) return;
+
+    Object.values(actions).forEach((action) => {
+      if (action.isRunning() && action.getClip().name !== actionName) {
+        action.fadeOut(0.2);
+      }
+    });
+    if (actions[actionName]) {
+      actions[actionName].reset().fadeIn(0.2).play();
+      currentAction.current = actionName;
+    }
+  };
 
   useFrame((state, delta) => {
-    if (!playerRef.current) return;
+    if (!playerRef.current || !colliderRef.current) return;
 
     if (cameraPhase === 'overview') {
-      const elapsedTime = state.clock.getElapsedTime();
-      const duration = 5;
-      const angle = (elapsedTime / duration) * Math.PI * 1; // Full circle over duration
-
-      const radius = 3; // Distance from the player
-      const playerPosition = playerRef.current.translation();
-      const x = playerPosition.x + radius * Math.cos(angle);
-      const z = playerPosition.z + radius * Math.sin(angle);
-      const y = playerPosition.y + 1; // Height of the camera
-
-      camera.position.lerp(new THREE.Vector3(x, y, z), 0.05);
-      camera.lookAt(playerPosition.x, playerPosition.y + 1, playerPosition.z);
-
-      if (elapsedTime >= duration) {
-        setCameraPhase('player');
-      }
+      handleCameraOverview(state);
     } else if (cameraPhase === 'player') {
-      moveDirection.current.set(0, 0, 0);
-
-      const shouldRun = shiftPressed && upPressed;
-      if (shouldRun !== isRunning) {
-        setIsRunning(shouldRun);
-        console.log('Running state changed:', shouldRun);
-        if (shouldRun) {
-          if (actions['walk'] && actions['walk'].isRunning()) {
-            actions['walk'].fadeOut(0.2).stop();
-          }
-          if (actions['run'] && !actions['run'].isRunning()) {
-            console.log('Playing run animation');
-            actions['run'].reset().fadeIn(0.2).play();
-          }
-        } else {
-          if (actions['run'] && actions['run'].isRunning()) {
-            console.log('Stopping run animation');
-            actions['run'].fadeOut(0.2).stop();
-          }
-        }
-      }
-
-      const moveSpeed = shouldRun ? 30 : 5;
-      const cameraLerpFactor = shouldRun ? 0.1 : 0.05;
-
-      if (keys.has('ArrowUp')) moveDirection.current.z -= 1;
-      if (keys.has('ArrowDown')) moveDirection.current.z += 1;
-      if (keys.has('ArrowLeft')) moveDirection.current.x -= 1;
-      if (keys.has('ArrowRight')) moveDirection.current.x += 1;
-
-      moveDirection.current.normalize().multiplyScalar(moveSpeed * delta);
-
-      const currentTranslation = playerRef.current.translation();
-      const forwardVector = new THREE.Vector3(0, 0, 1).applyQuaternion(playerScene.quaternion);
-      const rightVector = new THREE.Vector3(1, 0, 0).applyQuaternion(playerScene.quaternion);
-
-      const newTranslation = {
-        x: currentTranslation.x + moveDirection.current.z * forwardVector.x + moveDirection.current.x * rightVector.x,
-        y: currentTranslation.y,
-        z: currentTranslation.z + moveDirection.current.z * forwardVector.z + moveDirection.current.x * rightVector.z,
-      };
-
-      playerRef.current.setTranslation(newTranslation, true);
-
-      const groundedStatus = checkGrounded();
-      setGrounded(groundedStatus);
-
-      if (groundedStatus && isJumping) {
-        setIsJumping(false);
-      }
-
-      if (groundedStatus && moveDirection.current.length() > 0) {
-        if (shouldRun) {
-          console.log('Running');
-          if (actions['run'] && !actions['run'].isRunning()) {
-            console.log('Playing run animation');
-            actions['run'].reset().fadeIn(0.2).play();
-          }
-        } else if (keys.has('ArrowDown')) {
-          console.log('Walking backward');
-          if (actions['backward']) {
-            actions['backward'].play();
-          }
-        } else {
-          console.log('Walking');
-          if (actions['walk'] && !actions['walk'].isRunning()) {
-            console.log('Playing walk animation');
-            actions['walk'].reset().fadeIn(0.2).play();
-          }
-        }
-        if (actions['idle']) {
-          actions['idle'].stop();
-        }
-      } else {
-        if (actions['run'] && actions['run'].isRunning()) {
-          actions['run'].stop();
-        }
-        if (actions['walk'] && actions['walk'].isRunning()) {
-          actions['walk'].stop();
-        }
-        if (actions['backward']) {
-          actions['backward'].stop();
-        }
-        if (actions['idle']) {
-          actions['idle'].play();
-        }
-      }
-
-      if (keys.has('ArrowLeft')) {
-        playerScene.rotation.y += Math.PI * delta;
-        playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
-      } else if (keys.has('ArrowRight')) {
-        playerScene.rotation.y -= Math.PI * delta;
-        playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
-      }
-
-      const translation = playerRef.current.translation();
-      const targetPosition = new THREE.Vector3(translation.x, translation.y, translation.z);
-      const cameraPosition = targetPosition.clone().add(cameraOffset.clone().applyQuaternion(playerScene.quaternion));
-
-      camera.position.lerp(cameraPosition, cameraLerpFactor);
-      camera.lookAt(targetPosition.x, targetPosition.y + 1, targetPosition.z);
-
-      playerScene.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
-
-      if (translation.y < -10) {
-        diedSound.play(); // Play the fall sound
-        onPlayerFall();
-      }
+      handlePlayerMovement(delta);
+      handlePlayerFallDetection();
+      updateCameraPosition();
     }
   });
 
+  const handleCameraOverview = (state) => {
+    const elapsedTime = state.clock.getElapsedTime();
+    const duration = 5; // Duration of the transition
+    const playerPosition = playerRef.current.translation();
+    const delay = 1; // Delay in seconds
+
+    if (elapsedTime < delay) {
+      return;
+    }
+
+    const adjustedElapsedTime = elapsedTime - delay;
+    const angle = (adjustedElapsedTime / duration) * Math.PI; // Half circle
+    const radius = 3; // Radius of the circular path
+
+    const x = playerPosition.x + radius * Math.cos(angle);
+    const z = playerPosition.z + radius * Math.sin(angle);
+    const y = playerPosition.y + 1.6; // Adjust height if needed
+
+    const cameraPosition = new THREE.Vector3(x, y, z);
+
+    camera.position.lerp(cameraPosition, 0.05); // Smoothly interpolate camera position
+    camera.lookAt(playerPosition.x, playerPosition.y + 1, playerPosition.z);
+
+    if (adjustedElapsedTime >= duration) {
+      setCameraPhase('player');
+      setCameraTransitionComplete(true);
+    }
+  };
+
+  const handlePlayerMovement = (delta) => {
+    moveDirection.current.set(0, 0, 0);
+    const moveSpeed = 40;
+    const lateralMoveSpeed = 5;
+    const cameraLerpFactor = keys.has('ArrowDown') ? 0.1 : 0.05;
+
+    console.log('Mobile controls:', mobileControls);
+    console.log('Keyboard controls:', keys);
+
+    if (keys.has('ArrowUp') || mobileControls.up) moveDirection.current.z -= 1;
+    if (keys.has('ArrowDown') || mobileControls.down) moveDirection.current.z += 1;
+    if (keys.has('ArrowLeft') || mobileControls.left) moveDirection.current.x -= 1;
+    if (keys.has('ArrowRight') || mobileControls.right) moveDirection.current.x += 1;
+
+    console.log('moveDirection.current:', moveDirection.current);
+
+    moveDirection.current.z *= moveSpeed * delta;
+    moveDirection.current.x *= lateralMoveSpeed * delta;
+
+    const currentTranslation = playerRef.current.translation();
+    const forwardVector = new THREE.Vector3(0, 0, 1).applyQuaternion(playerScene.quaternion);
+    const rightVector = new THREE.Vector3(1, 0, 0).applyQuaternion(playerScene.quaternion);
+
+    const newTranslation = {
+      x: currentTranslation.x + moveDirection.current.z * forwardVector.x + moveDirection.current.x * rightVector.x,
+      y: currentTranslation.y,
+      z: currentTranslation.z + moveDirection.current.z * forwardVector.z + moveDirection.current.x * rightVector.z,
+    };
+
+    playerRef.current.setTranslation(newTranslation, true);
+
+    const groundedStatus = checkGrounded();
+    setGrounded(groundedStatus);
+
+    handleAnimations(keys, groundedStatus, moveDirection.current.length() > 0);
+    handlePlayerRotation(keys, delta);
+    handleCameraPositioning(currentTranslation, cameraLerpFactor);
+  };
+
+  const handlePlayerFallDetection = () => {
+    const translation = playerRef.current.translation();
+    if (translation.y < -10) {
+      sounds.died.play();
+      onPlayerFall();
+    }
+  };
+
+  const handleAnimations = (keys, groundedStatus, isMoving) => {
+    if (groundedStatus && isMoving) {
+      if (keys.has('ArrowUp') || mobileControls.up) {
+        playAction('run');
+      } else if (keys.has('ArrowDown') || mobileControls.down) {
+        playAction('backward');
+      } else if (keys.has('ArrowLeft') || keys.has('ArrowRight') || mobileControls.left || mobileControls.right) {
+        playAction('run');
+      }
+    } else {
+      playAction('idle');
+    }
+  };
+
+  const handlePlayerRotation = (keys, delta) => {
+    if (keys.has('ArrowLeft') || mobileControls.left) {
+      playerScene.rotation.y += Math.PI * delta;
+      playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
+    } else if (keys.has('ArrowRight') || mobileControls.right) {
+      playerScene.rotation.y -= Math.PI * delta;
+      playerRef.current.setRotation({ x: 0, y: playerScene.rotation.y, z: 0 });
+    }
+  };
+
+  const handleCameraPositioning = (currentTranslation, cameraLerpFactor) => {
+    const targetPosition = new THREE.Vector3(currentTranslation.x, currentTranslation.y, currentTranslation.z);
+    const offset = cameraOffsetBack.clone().applyQuaternion(playerScene.quaternion); // Use back offset for positioning
+
+    const cameraPosition = targetPosition.clone().add(offset);
+
+    camera.position.lerp(cameraPosition, cameraLerpFactor);
+    camera.lookAt(targetPosition.x, targetPosition.y + 1, targetPosition.z);
+
+    playerScene.position.set(targetPosition.x, targetPosition.y, targetPosition.z);
+  };
+
+  const updateCameraPosition = () => {
+    const currentTranslation = playerRef.current.translation();
+    const targetPosition = new THREE.Vector3(currentTranslation.x, currentTranslation.y, currentTranslation.z);
+    const offset = cameraOffsetBack.clone().applyQuaternion(playerScene.quaternion); // Use back offset for positioning
+
+    const cameraPosition = targetPosition.clone().add(offset);
+
+    camera.position.copy(cameraPosition);
+    camera.lookAt(targetPosition.x, targetPosition.y + 1, targetPosition.z);
+  };
+
   const handleCollision = ({ other }) => {
     const objectName = other.rigidBodyObject?.name || 'unknown';
-    if (objectName === 'ground') {
-      return; // Ignore collision with ground
-    }
-    let soundToPlay = hitSound;
+    if (objectName === 'ground') return;
 
-    if (objectName === 'RedBox') {
-      soundToPlay = redBoxSound;
-    } else if (objectName === 'YellowBox') {
+    if (objectName === 'Logo' || objectName.startsWith('Text3DItem')) {
+      if (hitObjects.has(objectName)) return;
+
+      setHitObjects((prevHitObjects) => {
+        const newHitObjects = new Set(prevHitObjects);
+        newHitObjects.add(objectName);
+        onPlayerHit(newHitObjects.size, objectName);
+        if (objectName === 'Logo') {
+          sounds.logo.play();
+        } else {
+          sounds.hit.play();
+        }
+        return newHitObjects;
+      });
+    } else {
+      setHitObjects((prevHitObjects) => {
+        const newHitObjects = new Set(prevHitObjects);
+        newHitObjects.add(objectName);
+        onPlayerHit(newHitObjects.size, objectName);
+        sounds.hit.play();
+        return newHitObjects;
+      });
+    }
+
+    if (objectName === 'YellowBox') {
       onPlayerFall();
-      soundToPlay = diedSound;
+      sounds.died.play();
+    } else if (objectName === 'Billboard') {
+      window.location.href = 'mailto:crystalthedeveloper@gmail.com';
     }
-
-    setHitObjects((prevHitObjects) => {
-      const newHitObjects = new Set(prevHitObjects);
-      newHitObjects.add(objectName);
-      onPlayerHit(newHitObjects.size, objectName);
-      soundToPlay.play();
-      return newHitObjects;
-    });
   };
 
   return (
     <RigidBody
-      ref={(ref) => {
-        if (ref) {
-          playerRef.current = ref;
-        }
-      }}
+      ref={playerRef}
       type="dynamic"
-      position={[0, 2, 0]}
+      position={[0, 1, 0]}
       colliders={false}
       enabledRotations={[false, true, false]}
       gravityScale={1}
@@ -309,8 +263,8 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall }) => {
       name="player"
       onCollisionEnter={handleCollision}
     >
-      <primitive object={playerScene} />
-      <CuboidCollider args={[0.5, 1, 0.5]} position={[0, 1, 0]} />
+      <primitive object={playerScene} position={[0, 0.5, 0]} />
+      <CuboidCollider ref={colliderRef} args={[0.5, 1, 0.5]} position={[0, 1, 0]} />
     </RigidBody>
   );
 };

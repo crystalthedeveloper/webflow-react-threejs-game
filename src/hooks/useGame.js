@@ -2,30 +2,65 @@
 import create from 'zustand';
 
 const useGame = create((set) => ({
-  // Initial state
-  phase: 'initialMenu', // Starting with the initial menu phase
-  cameraPhase: 'overview', // initial state for camera phase
+  // Initial states
+  phase: 'initialMenu',
+  cameraPhase: 'overview',
   resetPlayerPosition: false,
+  resetCameraPosition: false,
+  cameraTransitionComplete: false,
+  startTime: null,
+
   // Game phase control functions
   start: () => set((state) => {
-    return state.phase === 'initialMenu' ? { phase: 'loading' } : {};
+    if (state.phase === 'initialMenu') {
+      return { phase: 'loading' };
+    }
+    return {};
   }),
+
   loadComplete: () => set((state) => {
-    return { phase: 'ready' };
+    if (state.phase === 'loading') {
+      return { phase: 'ready' };
+    }
+    return {};
   }),
+
   beginPlaying: () => set((state) => {
-    return state.phase === 'ready' ? { phase: 'playing', cameraPhase: 'overview' } : {};
+    if (state.phase === 'ready') {
+      return { phase: 'playing', cameraPhase: 'overview', cameraTransitionComplete: false, startTime: null };
+    }
+    return {};
   }),
-  restart: () => set((state) => {
-    return state.phase !== 'playing' ? { phase: 'ready', cameraPhase: 'overview', resetPlayerPosition: true } : {};
+
+  restart: () => set(() => {
+    return { phase: 'ready', cameraPhase: 'overview', resetPlayerPosition: true, resetCameraPosition: true, startTime: null };
   }),
-  resetPlayerPositionDone: () => set((state) => ({ resetPlayerPosition: false })),
+
+  resetPlayerPositionDone: () => set(() => {
+    return { resetPlayerPosition: false };
+  }),
+
+  resetCameraPositionDone: () => set(() => {
+    return { resetCameraPosition: false };
+  }),
+
   playerDied: () => set((state) => {
+    console.log('playerDied called. Camera phase:', state.cameraPhase);
     return { phase: 'dead' };
   }),
-  setCameraPhase: (phase) => {
-    set({ cameraPhase: phase });
-  }, // function to set camera phase
+
+  setCameraPhase: (phase) => set(() => {
+    return { cameraPhase: phase };
+  }),
+
+  startTimer: () => set(() => {
+    const startTime = Date.now();
+    return { startTime };
+  }),
+
+  setCameraTransitionComplete: (complete) => set(() => {
+    return { cameraTransitionComplete: complete };
+  })
 }));
 
 export default useGame;
