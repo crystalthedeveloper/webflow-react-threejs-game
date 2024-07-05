@@ -119,7 +119,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
 
     const cameraPosition = new THREE.Vector3(x, y, z);
 
-    camera.position.lerp(cameraPosition, 0.05); // Smoothly interpolate camera position
+    camera.position.lerp(cameraPosition, 0.1); // Smoothly interpolate camera position
     camera.lookAt(playerPosition.x, playerPosition.y + 1, playerPosition.z);
 
     if (adjustedElapsedTime >= duration) {
