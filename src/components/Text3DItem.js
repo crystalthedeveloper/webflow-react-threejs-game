@@ -33,6 +33,7 @@ const Text3DItem = ({ position, name, index, isAwake, onHit }) => {
       type="dynamic" // Ensure it is a dynamic body for collisions
       colliders="cuboid" // Ensure appropriate collider shape
       scale={[1.2, 1.2, 1.2]} // Scale the collider slightly larger
+      mass={30}
     >
       <Text3D
         font={CinzelExtraBoldRegular}

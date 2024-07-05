@@ -1,6 +1,5 @@
 // src/hooks/useGeneratePositions.js
 import { useState, useEffect } from 'react';
-import * as THREE from 'three';
 
 const generateRandomPosition = (existingPositions, minDistance, yRange) => {
   let position;
@@ -27,10 +26,11 @@ const generatePositions = (numPositions, minDistance, existingPositions, yRange)
   return positions;
 };
 
-const useGeneratePositions = (cloudCount, whiteBoxCount, yellowBoxCount) => {
+const useGeneratePositions = (cloudCount, whiteBoxCount, yellowBoxCount, logoCount) => {
   const [cloudPositions, setCloudPositions] = useState([]);
   const [whiteBoxPositions, setWhiteBoxPositions] = useState([]);
   const [yellowBoxPositions, setYellowBoxPositions] = useState([]);
+  const [logoPositions, setLogoPositions] = useState([]);
 
   useEffect(() => {
     const generatedCloudPositions = generatePositions(cloudCount, 50, [], [10, 30]);
@@ -41,9 +41,12 @@ const useGeneratePositions = (cloudCount, whiteBoxCount, yellowBoxCount) => {
 
     const generatedYellowBoxPositions = generatePositions(yellowBoxCount, 50, [...generatedCloudPositions, ...generatedWhiteBoxPositions], [5, 10]);
     setYellowBoxPositions(generatedYellowBoxPositions);
-  }, [cloudCount, whiteBoxCount, yellowBoxCount]);
 
-  return { cloudPositions, whiteBoxPositions, yellowBoxPositions };
+    const generatedLogoPositions = generatePositions(logoCount, 50, [...generatedCloudPositions, ...generatedWhiteBoxPositions, ...generatedYellowBoxPositions], [2, 3]);
+    setLogoPositions(generatedLogoPositions);
+  }, [cloudCount, whiteBoxCount, yellowBoxCount, logoCount]);
+
+  return { cloudPositions, whiteBoxPositions, yellowBoxPositions, logoPositions };
 };
 
 export default useGeneratePositions;

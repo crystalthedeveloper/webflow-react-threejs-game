@@ -15,6 +15,7 @@ import Logo from './Logo';
 const CLOUD_COUNT = 10;
 const WHITE_BOX_COUNT = 10;
 const YELLOW_BOX_COUNT = 30;
+const LOGO_COUNT = 1;
 
 const StaticCloud = ({ position, scale }) => {
   const cloudGeometry = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
@@ -30,7 +31,7 @@ const StaticCloud = ({ position, scale }) => {
 };
 
 const Scene = ({ onItemsLoaded, updateProgress, onPlayerFall, mobileControls }) => {
-  const { cloudPositions, whiteBoxPositions, yellowBoxPositions } = useGeneratePositions(CLOUD_COUNT, WHITE_BOX_COUNT, YELLOW_BOX_COUNT);
+  const { cloudPositions, whiteBoxPositions, yellowBoxPositions, logoPositions } = useGeneratePositions(CLOUD_COUNT, WHITE_BOX_COUNT, YELLOW_BOX_COUNT, LOGO_COUNT);
 
   const cloudElements = useMemo(() =>
     cloudPositions.map((pos, index) => (
@@ -53,6 +54,13 @@ const Scene = ({ onItemsLoaded, updateProgress, onPlayerFall, mobileControls }) 
     [yellowBoxPositions]
   );
 
+  const logoElements = useMemo(() =>
+    logoPositions.map((pos, index) => (
+      <Logo key={index} position={[pos.x, pos.y, pos.z]} />
+    )),
+    [logoPositions]
+  );
+
   return (
     <>
       <Environment files="/skybox/kloofendal_48d_partly_cloudy_puresky_4k.hdr"/>
@@ -63,9 +71,9 @@ const Scene = ({ onItemsLoaded, updateProgress, onPlayerFall, mobileControls }) 
       {cloudElements}
       {whiteBoxElements}
       {yellowBoxElements}
+      {logoElements}
       <Ground position={[0, 0, 0]} />
       <OrbitControls />
-      <Logo position={[0, 2, 10]} updateProgress={updateProgress} />
       <Billboard position={[-6, 1, -20]} message="Need a Website?" />
       <Text3DItem updateProgress={updateProgress} />
       <ThirdPersonController
