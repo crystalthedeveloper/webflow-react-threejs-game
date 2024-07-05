@@ -21,17 +21,41 @@ body,
   display: block;
 }
 
+/* Disable text selection */
+body, html, #root, .canvas {
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+  user-select: none; /* Standard */
+}
+
+/* Disable long press context menu */
+body, html, #root, .canvas {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-tap-highlight-color: transparent; /* Android */
+}
+
 /* Navigation Bar */
 .nav {
   position: absolute;
   display: flex;
   flex-direction: column;
   flex-wrap: nowrap;
-  width: 20%;
+  width: 36%;
   z-index: 99;
   align-items: center;
 }
-
+@media (max-width: 768px) {
+  .nav {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    width: 100%;
+    z-index: 99;
+    align-items: center;
+  }
+}
 /* Logo */
 .logo-image {
   width: 178px;
@@ -164,6 +188,7 @@ body,
 .menu-button:hover {
   background-color: #555;
 }
+
 /*  mobile controls */
 .mobile-controls {
   position: absolute;
@@ -175,13 +200,63 @@ body,
 }
 
 .control-button {
-  width: 60px;
-  height: 60px;
-  background-color: rgba(0, 0, 0, 0.5);
-  border: 1px solid #ccc;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(0,0,0,0.5);
   border-radius: 5px;
-  font-size: 14px;
-  font-weight: bold;
-  color: #ffe600;
   cursor: pointer;
+  position: relative;
+  border: none;
+}
+
+.control-button.up::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0; 
+  height: 0; 
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-bottom: 30px solid #ffe600;
+  transform: translate(-50%, -50%);
+}
+
+.control-button.down::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0; 
+  height: 0; 
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 30px solid #ffe600;
+  transform: translate(-50%, -50%);
+}
+
+.control-button.left::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0; 
+  height: 0; 
+  border-top: 20px solid transparent;
+  border-bottom: 20px solid transparent;
+  border-right: 30px solid #ffe600;
+  transform: translate(-50%, -50%);
+}
+
+.control-button.right::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0; 
+  height: 0; 
+  border-top: 20px solid transparent;
+  border-bottom: 20px solid transparent;
+  border-left: 30px solid #ffe600;
+  transform: translate(-50%, -50%);
 }

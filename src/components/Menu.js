@@ -21,9 +21,7 @@ const Menu = ({ setMenuOpen }) => {
       <h1>Welcome to the Game</h1>
       {showInstructions && (
         <p className="instructions">
-          Use the arrow keys to move and the spacebar to jump.<br /> Collect items and achieve the best time to win!<br />
-          1st place winner earns <span className="good-luck">$$$</span><br />
-          <span className="good-luck">Good luck!</span>
+          Use the arrow keys to move and the spacebar to jump. Collect items and achieve the best time to win! <span className="good-luck">1st</span> place winner earns <br /> <span className="good-luck">$$$</span> <span className="good-luck">Good luck!</span>
         </p>
       )}
       <button onClick={start} className="menu-button">Play</button>

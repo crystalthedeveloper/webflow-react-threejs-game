@@ -22,6 +22,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
   const { rapier, world } = useRapier();
   const [grounded, setGrounded] = useState(false);
   const [hitObjects, setHitObjects] = useState(new Set());
+  const [lastBillboardClick, setLastBillboardClick] = useState(0); // Track last billboard click time
   const cameraPhase = useGame((state) => state.cameraPhase);
   const setCameraPhase = useGame((state) => state.setCameraPhase);
   const resetPlayerPosition = useGame((state) => state.resetPlayerPosition);
@@ -30,7 +31,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
   const sounds = {
     hit: new Audio('/sounds/hit.mp3'),
     died: new Audio('/sounds/died.mp3'),
-    logo: new Audio('/sounds/logoHit.mp3'),
+    logo: new Audio('/sounds/logo.mp3'),
   };
 
   useEffect(() => {
@@ -126,15 +127,10 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
     const lateralMoveSpeed = 5;
     const cameraLerpFactor = keys.has('ArrowDown') ? 0.1 : 0.05;
 
-    console.log('Mobile controls:', mobileControls);
-    console.log('Keyboard controls:', keys);
-
     if (keys.has('ArrowUp') || mobileControls.up) moveDirection.current.z -= 1;
     if (keys.has('ArrowDown') || mobileControls.down) moveDirection.current.z += 1;
     if (keys.has('ArrowLeft') || mobileControls.left) moveDirection.current.x -= 1;
     if (keys.has('ArrowRight') || mobileControls.right) moveDirection.current.x += 1;
-
-    console.log('moveDirection.current:', moveDirection.current);
 
     moveDirection.current.z *= moveSpeed * delta;
     moveDirection.current.x *= lateralMoveSpeed * delta;
@@ -162,7 +158,7 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
   const handlePlayerFallDetection = () => {
     const translation = playerRef.current.translation();
     if (translation.y < -10) {
-      sounds.died.play();
+      playSound(sounds.died);
       onPlayerFall();
     }
   };
@@ -226,9 +222,9 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
         newHitObjects.add(objectName);
         onPlayerHit(newHitObjects.size, objectName);
         if (objectName === 'Logo') {
-          sounds.logo.play();
+          playSound(sounds.logo);
         } else {
-          sounds.hit.play();
+          playSound(sounds.hit);
         }
         return newHitObjects;
       });
@@ -237,16 +233,31 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
         const newHitObjects = new Set(prevHitObjects);
         newHitObjects.add(objectName);
         onPlayerHit(newHitObjects.size, objectName);
-        sounds.hit.play();
+        playSound(sounds.hit);
         return newHitObjects;
       });
     }
 
     if (objectName === 'YellowBox') {
       onPlayerFall();
-      sounds.died.play();
+      playSound(sounds.died);
     } else if (objectName === 'Billboard') {
-      window.location.href = 'mailto:crystalthedeveloper@gmail.com';
+      const now = Date.now();
+      const delay = 2000; // 2 seconds delay
+      if (now - lastBillboardClick > delay) {
+        window.location.href = 'mailto:crystalthedeveloper@gmail.com';
+        setLastBillboardClick(now); // Update the last click time
+      }
+    }
+  };
+
+  const playSound = (sound) => {
+    try {
+      sound.play().catch(error => {
+        console.error("Audio playback failed:", error);
+      });
+    } catch (error) {
+      console.error("Audio playback failed:", error);
     }
   };
 

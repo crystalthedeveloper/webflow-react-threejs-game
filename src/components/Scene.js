@@ -65,7 +65,7 @@ const Scene = ({ onItemsLoaded, updateProgress, onPlayerFall, mobileControls }) 
       {yellowBoxElements}
       <Ground position={[0, 0, 0]} />
       <OrbitControls />
-      <Logo position={[0, 2, 4]} updateProgress={updateProgress} />
+      <Logo position={[0, 2, 10]} updateProgress={updateProgress} />
       <Billboard position={[-6, 1, -20]} message="Need a Website?" />
       <Text3DItem updateProgress={updateProgress} />
       <ThirdPersonController

@@ -19,8 +19,6 @@ const useMobileControls = () => {
     setMobileControls((controls) => ({ ...controls, [direction]: false }));
   }, []);
 
-  console.log('Mobile controls state:', mobileControls);
-
   return {
     mobileControls,
     handleTouchStart,
