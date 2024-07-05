@@ -45,7 +45,6 @@ const useGame = create((set) => ({
   }),
 
   playerDied: () => set((state) => {
-    console.log('playerDied called. Camera phase:', state.cameraPhase);
     return { phase: 'dead' };
   }),
 

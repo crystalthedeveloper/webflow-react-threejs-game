@@ -28,13 +28,20 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
   const resetPlayerPosition = useGame((state) => state.resetPlayerPosition);
   const setCameraTransitionComplete = useGame((state) => state.setCameraTransitionComplete);
 
+  // Ensure multiple audio formats for cross-browser compatibility
   const sounds = {
     hit: new Audio('/sounds/hit.mp3'),
     died: new Audio('/sounds/died.mp3'),
-    logo: new Audio('/sounds/logo.mp3'),
+    logo: new Audio('/sounds/LogoHit.mp3'),
   };
 
   useEffect(() => {
+    Object.values(sounds).forEach(sound => {
+      sound.onerror = (error) => {
+        console.error(`Audio playback failed for ${sound.src}:`, error);
+      };
+    });
+
     initializePlayer();
     if (resetPlayerPosition && playerRef.current) {
       playerRef.current.setTranslation({ x: 0, y: 1, z: 0 }, true);
@@ -213,8 +220,10 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
   const handleCollision = ({ other }) => {
     const objectName = other.rigidBodyObject?.name || 'unknown';
     if (objectName === 'ground') return;
-
-    if (objectName === 'Logo' || objectName.startsWith('Text3DItem')) {
+    if (objectName === 'YellowBox') {
+      onPlayerFall();
+      playSound(sounds.died);
+    } else if (objectName === 'Logo' || objectName.startsWith('Text3DItem')) {
       if (hitObjects.has(objectName)) return;
 
       setHitObjects((prevHitObjects) => {
@@ -254,10 +263,10 @@ const ThirdPersonController = ({ onPlayerHit, onPlayerFall, mobileControls = { u
   const playSound = (sound) => {
     try {
       sound.play().catch(error => {
-        console.error("Audio playback failed:", error);
+        console.error(`Audio playback failed for ${sound.src}:`, error);
       });
     } catch (error) {
-      console.error("Audio playback failed:", error);
+      console.error(`Audio playback failed for ${sound.src}:`, error);
     }
   };
 

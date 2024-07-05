@@ -10,6 +10,7 @@ import useGame from './hooks/useGame';
 import useMobileControls from './hooks/useMobileControls';
 import MobileControls from './components/MobileControls';
 import { Physics } from '@react-three/rapier';
+import StatsMonitor from './components/StatsMonitor';
 
 const App = () => {
   const [progress, setProgress] = useState(0);
